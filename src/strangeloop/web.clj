@@ -36,12 +36,12 @@
     input-stream))
 
 (defn create-chart []
-  (let [data (-> (twitter/fetch-public-timeline)
-                 (metrics/words)
-                 (metrics/freqs))]
-    (render-image
-     (chart->bytes
-      (metrics/word-chart data)))))
+  (-> (twitter/fetch-public-timeline)
+      (metrics/words)
+      (metrics/freqs)
+      (metrics/word-chart)
+      (chart->bytes)
+      (render-image)))
 
 (defroutes routes
   (GET "/" [] (layout "Hello" "Strangeloop Clojure Analytics Workshop"))
