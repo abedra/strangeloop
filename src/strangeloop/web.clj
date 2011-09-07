@@ -5,7 +5,8 @@
   (:require [hiccup.core :as hiccup]
             [hiccup.page-helpers :as page]
             [compojure.handler :as handler]
-            [strangeloop.main :as metrics])
+            [strangeloop.twitter :as twitter]
+            [strangeloop.metrics :as metrics])
   (:import (java.io ByteArrayInputStream ByteArrayOutputStream)))
 
 (defn layout
@@ -30,15 +31,21 @@
   [chart]
   (let [output-stream (ByteArrayOutputStream.)
         input-stream (do
-             (save chart output-stream)
-             (ByteArrayInputStream. (.toByteArray output-stream)))]
+                       (save chart output-stream)
+                       (ByteArrayInputStream. (.toByteArray output-stream)))]
     input-stream))
 
+(defn create-chart []
+  (let [data (-> (twitter/fetch-public-timeline)
+                 (metrics/words)
+                 (metrics/freqs))]
+    (render-image
+     (chart->bytes
+      (metrics/word-chart data)))))
+
 (defroutes routes
-  (GET "/" [] (layout "Hello" "Chart goes here"))
-  (GET "/chart" [] (render-image
-                    (chart->bytes
-                     (metrics/word-chart (metrics/freqs))))))
+  (GET "/" [] (layout "Hello" "Strangeloop Clojure Analytics Workshop"))
+  (GET "/chart" [] (create-chart)))
 
 (def application
   (handler/site routes))

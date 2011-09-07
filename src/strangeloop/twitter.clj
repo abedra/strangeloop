@@ -22,9 +22,9 @@
    (slurp "data/public_timeline.json")))
 
 (defn fetch-public-timeline
-  "Retrieves and parses the JSON formatted public timeline. If no internet connection
-   is present or the public timeline cannot be parsed then pull it from a local file
-   in the project."
+  "Retrieves and parses the JSON formatted public timeline. If no
+   internet connection is present or the public timeline cannot be
+   parsed then pull it from a local file in the project."
   []
   (try
     (from-twitter)
@@ -32,8 +32,8 @@
       (from-file))))
 
 (defn print-public-timeline
-  "Prints out the public timeline. Not really useful for anything but debugging.
-   Use fetch-public-timeline for real results"
+  "Prints out the public timeline. Only used to demonstrate
+   functionality of the original code"
   []
   (doseq [tweet (fetch-public-timeline)]
     (println (str "@" (:screen_name (:user tweet))))
