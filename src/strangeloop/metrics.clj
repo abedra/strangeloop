@@ -8,8 +8,14 @@
 
 (defn freqs [words]
   {:words words
-   :freqs (filter #(< 1 %)
-                  (map (frequencies words) words))})
+   :freqs (map (frequencies words) words)})
 
 (defn word-chart [{:keys [words freqs]}]
   (bar-chart words freqs :vertical false))
+
+(defn cloud []
+  (let [data (-> (twitter/fetch-public-timeline)
+                 (words)
+                 (freqs))]
+    (zipmap (:words data) (:freqs data))))
+

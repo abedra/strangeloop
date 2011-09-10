@@ -43,9 +43,19 @@
       (chart->bytes)
       (render-image)))
 
+(defn cloud []
+  (layout "Cloud"
+          [:ul {:id "cloud" :style "list-style: none;"}
+           (map (fn [word]
+                  [:li {:class "cloud"
+                        :style (str "font-size: "(second word) "em;")}
+                   (first word)])
+                (metrics/cloud))]))
+
 (defroutes routes
   (GET "/" [] (layout "Hello" "Strangeloop Clojure Analytics Workshop"))
-  (GET "/chart" [] (create-chart)))
+  (GET "/chart" [] (create-chart))
+  (GET "/cloud" [] (cloud)))
 
 (def application
   (handler/site routes))
