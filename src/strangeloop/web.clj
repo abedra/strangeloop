@@ -17,7 +17,8 @@
     [:title title]]
    [:body
     [:div {:id "header"} [:h2 "Hello Strangeloop"]]
-    [:div {:id "content"} body]]))
+    [:div {:id "content"
+           :style "width: 960px; margin: auto;"} body]]))
 
 (defn render-image
   "Returns the proper Ring response for an image"
@@ -45,10 +46,10 @@
 
 (defn cloud []
   (layout "Cloud"
-          [:ul {:id "cloud" :style "list-style: none;"}
+          [:ul {:id "cloud" :style "list-style-type: none; width: 800px;"}
            (map (fn [word]
                   [:li {:class "cloud"
-                        :style (str "font-size: "(second word) "em;")}
+                        :style (str "font-size: "(second word) "em; display: block; float: left; padding-right: 20px;")}
                    (first word)])
                 (metrics/cloud))]))
 
