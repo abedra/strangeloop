@@ -10,7 +10,6 @@
 #+begin_src sh
   lein repl
 #+end_src
-
 #+begin_src clojure
   (use 'strangeloop.twitter)
   (print-public-timeline)
@@ -22,12 +21,10 @@
   (keys (first timeline))
   (:text (first timeline))
 #+end_src
-
 #+begin_src clojure
   (:user (first timeline))
   (:screen_name (:user (first timeline)))
 #+end_src
-
 ** Taking a step back
 #+begin_src clojure
   (request "http://google.com")
@@ -37,7 +34,6 @@
 #+begin_src clojure
   (use '(incanter core stats charts))
 #+end_src
-
 #+begin_src clojure
   (def completxity-set [34 78 339 63 54 72 80])
   (def coverage-set [98 76 80 99 89 20 92])
@@ -52,12 +48,10 @@
   
   (view (complexity-plot))
 #+end_src
-
 #+begin_src clojure
   (add-pointer plot 3 339 :text "Sample Project" :angle :sw)
   (view (complexity-plot))
 #+end_src
-
 #+begin_src clojure
   (defn code-coverage-plot []
     (let [plot (scatter-plot [1 2 3 4 5 6]
@@ -69,13 +63,182 @@
   
   (view (coverage-plot))
 #+end_src
-
 #+begin_src clojure
   (add-pointer plot 6 20 :text "Sample Project" :angle :nw)
   (view (coverage-plot))
 #+end_src
-
 ** Manipulating the twitter data
 #+begin_src clojure
-  xo
+  (map :text timeline)
+  (apply str (map :text timeline))
+  (req-seq #"\w+" (apply str (map :text timeline)))
+  
+  (filter #(< 2 (count %))
+          (req-seq #"\w+" (apply str (map :text timeline))))
+  
+  (defn words [data]
+    (filter #(< 2 (count %))
+            (req-seq #"\w+" (apply str (map :text data)))))
+  
+  (words timeline)
 #+end_src
+#+begin_src clojure
+  (frequencies (words timeline))
+  (map (frequencies (words timeline) (words timeline)))
+  
+  (defn freqs [words]
+    {:words words
+     :freqs (map (frequencies words) words)})
+  
+  (freqs (words timeline))
+#+end_src
+#+begin_src clojure
+  (let [{:keys [words freqs]} (freqs (words timeline))]
+    (bar-chart words freqs :vertical false))
+  
+  (view (let [{:keys [words freqs]} (freqs (words timeline))]
+          (bar-chart words freqs :vertical false)))
+  
+  (defn word-chart [{:keys [words freqs]}]
+    (bar-chart words freqs :vertical false))
+  
+  (view (word-chart (freqs (words timeline))))
+#+end_src
+*** End result
+#+begin_src clojure
+  (ns strangeloop.metrics
+    (:use [incanter.charts :only (bar-chart)])
+    (:require [strangeloop.twitter :as twitter]))
+  
+  (defn words [data]
+    (filter #(< 2 (count %))
+            (re-seq #"\w+" (apply str (map :text data)))))
+  
+  (defn freqs [words]
+    {:words words
+     :freqs (map (frequencies words) words)})
+  
+  (defn word-chart [{:keys [words freqs]}]
+    (bar-chart words freqs :vertical false))
+#+end_src
+** Hello Compojure
+#+begin_src clojure
+  (ns strangeloop.web
+    (:use [compojure.core :only (defroutes GET)]
+          [ring.adapter.jetty :only (run-jetty)])
+    (:require [compojure.handler :as handler]))
+  
+  (defroutes routes
+    (GET "/" [] "<h2>Hello Strangeloop</h2>"))
+  
+  (def application
+    (handler/site routes))
+  
+  (defn start []
+    (run-jetty (var application) {:port 8080
+                                  :join? false}))
+  
+  (use 'strangeloop.web)
+  (start)
+#+end_src
+** Adding a layout
+#+begin_src clojure
+  (ns strangeloop.web
+    (:use [ring.adapter.jetty :only (run-jetty)]
+          [compojure.core :only (defroutes GET)])
+    (:require [hiccup.page-helpers :as page]
+              [compojure.handler :as handler]))
+  
+  (defn layout
+    "The main layout for the web application"
+    [title & body]
+    (page/html5
+     [:head
+      [:title title]]
+     [:body
+      [:div {:id "header"} [:h2 "Hello Strangeloop"]]
+      [:div {:id "content"
+             :style "width: 960px; margin: auto;"} body]]))
+  
+  (defroutes routes
+    (GET "/" [] (layout "Hello Strangeloop"
+                        "Strangeloop Analytics Workshop")))
+  
+  (use 'strangeloop.web :reload)
+#+end_src
+** Putting the chart in a better place
+#+begin_src clojure
+  (ns strangeloop.web
+    (:use [ring.adapter.jetty :only (run-jetty)]
+          [compojure.core :only (defroutes GET)]
+          [incanter.core :only (save)])
+    (:require [hiccup.page-helpers :as page]
+              [compojure.handler :as handler]
+              [strangeloop.twitter :as twitter]
+              [strangeloop.metrics :as metrics])
+    (:import (java.io ByteArrayInputStream ByteArrayOutputStream)))
+  
+  (defn render-image
+    "Returns the proper Ring response for an image"
+    [bytes]
+    {:status 200
+     :headers {"Content-Type" "image/png"}
+     :body bytes})
+  
+  (defn chart->bytes
+    "Produces an incanter chart as bytes for a web browser"
+    [chart]
+    (let [output-stream (ByteArrayOutputStream.)
+          input-stream (do
+                         (save chart output-stream)
+                         (ByteArrayInputStream. (.toByteArray output-stream)))]
+      input-stream))
+  
+  (defn create-chart []
+    (-> (twitter/fetch-public-timeline)
+        (metrics/words)
+        (metrics/freqs)
+        (metrics/word-chart)
+        (chart->bytes)
+        (render-image)))
+  
+  (defroutes routes
+    (GET "/" [] (layout "Hello" "Strangeloop Clojure Analytics Workshop"))
+    (GET "/chart" [] (create-chart)))
+  
+  (use 'strangeloop.web :reload)
+#+end_src
+** A better way of displaying the data
+*** First we need to get the data in a better form
+#+begin_src clojure
+  (defn cloud []
+    (let [data (-> (twitter/fetch-public-timeline)
+                   (words)
+                   (freqs))]
+      (zipmap (:words data) (:freqs data))))
+#+end_src
+*** Now we can display it in a "tag cloud" format
+#+begin_src clojure
+  (defn cloud []
+    (layout "Cloud"
+            [:ul {:id "cloud" :style "list-style-type: none; width: 800px;"}
+             (map (fn [word]
+                    [:li {:class "cloud"
+                          :style (str "font-size: "(second word) "em; display: block; float: left; padding-right: 20px;")}
+                     (first word)])
+                  (metrics/cloud))]))
+  
+  (defroutes routes
+    (GET "/" [] (layout "Hello" "Strangeloop Clojure Analytics Workshop"))
+    (GET "/chart" [] (create-chart))
+    (GET "/cloud" [] (cloud)))
+  
+  (use 'strangeloop.web :reload-all)
+#+end_src
+** A complete solution
+*** git co -b solution
+** Bonus: How can this be better?
+** Challenge
+*** Given the wealth of information Twitter returns, add something new to the example
+*** When you are done present your solution
+*** The winner will receive a copy of "Programming Clojure 2nd Edition"
