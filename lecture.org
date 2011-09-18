@@ -1,0 +1,81 @@
+* Clojure Part 2: Building Analytics with Clojure
+** Getting Started
+*** Project
+**** github.com/abedra/strangeloop
+*** Leiningen
+#+begin_src sh
+  lein deps
+#+end_src
+*** Testing everything
+#+begin_src sh
+  lein repl
+#+end_src
+
+#+begin_src clojure
+  (use 'strangeloop.twitter)
+  (print-public-timeline)
+#+end_src
+** Examining the data
+#+begin_src clojure
+  (def timeline (fetch-public-timeline))
+  (first timeline)
+  (keys (first timeline))
+  (:text (first timeline))
+#+end_src
+
+#+begin_src clojure
+  (:user (first timeline))
+  (:screen_name (:user (first timeline)))
+#+end_src
+
+** Taking a step back
+#+begin_src clojure
+  (request "http://google.com")
+  (request "http://twitter.com/statuses/public_timeline.json")
+#+end_src
+** Working with incanter
+#+begin_src clojure
+  (use '(incanter core stats charts))
+#+end_src
+
+#+begin_src clojure
+  (def completxity-set [34 78 339 63 54 72 80])
+  (def coverage-set [98 76 80 99 89 20 92])
+  
+  (defn complexity-plot []
+    (let [plot (scatter-plot [1 2 3 4 5 6 7]
+                             complexity-set
+                             :title "Code Complexity"
+                             :x-label "Project"
+                             :y-label "Complexity")]
+      plot))
+  
+  (view (complexity-plot))
+#+end_src
+
+#+begin_src clojure
+  (add-pointer plot 3 339 :text "Sample Project" :angle :sw)
+  (view (complexity-plot))
+#+end_src
+
+#+begin_src clojure
+  (defn code-coverage-plot []
+    (let [plot (scatter-plot [1 2 3 4 5 6]
+                             coverage-set
+                             :title "Code Coverage"
+                             :x-label "Project"
+                             :y-label "Code Coverage")]
+      plot))
+  
+  (view (coverage-plot))
+#+end_src
+
+#+begin_src clojure
+  (add-pointer plot 6 20 :text "Sample Project" :angle :nw)
+  (view (coverage-plot))
+#+end_src
+
+** Manipulating the twitter data
+#+begin_src clojure
+  xo
+#+end_src
